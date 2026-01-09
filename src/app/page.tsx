@@ -7,7 +7,6 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { useTheme } from "next-themes";
 import {
   Building2,
   CreditCard,
@@ -20,11 +19,10 @@ import {
   QrCode,
   Clock,
   Users,
-  Sun,
-  Moon,
-  LogIn,
 } from "lucide-react";
 import { appConfig } from "@/config/app.config";
+import PublicNavbar from "@/components/layout/PublicNavbar";
+import { Footer } from "@/components/layout/Footer";
 
 // Animation variants
 const fadeInUp = {
@@ -102,7 +100,6 @@ const features = [
 ];
 
 export default function HomePage() {
-  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -114,168 +111,8 @@ export default function HomePage() {
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "var(--background)" }}>
       {/* Navbar */}
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 100,
-          backgroundColor: "rgba(var(--card-rgb, 255, 255, 255), 0.8)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid var(--border)",
-        }}
-      >
-        <nav
-          style={{
-            maxWidth: "1280px",
-            margin: "0 auto",
-            padding: "0 1.5rem",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              height: "72px",
-            }}
-          >
-            {/* Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div
-                style={{
-                  width: "42px",
-                  height: "42px",
-                  borderRadius: "12px",
-                  background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-                }}
-              >
-                <Building2 style={{ width: "22px", height: "22px", color: "white" }} />
-              </div>
-              <div>
-                <span
-                  style={{
-                    fontWeight: 700,
-                    fontSize: "1.125rem",
-                    color: "var(--foreground)",
-                  }}
-                >
-                  {appConfig.name}
-                </span>
-                <span
-                  style={{
-                    display: "block",
-                    fontSize: "0.75rem",
-                    color: "var(--muted)",
-                    marginTop: "-2px",
-                  }}
-                >
-                  Naresuan University
-                </span>
-              </div>
-            </div>
-
-            {/* Nav Items */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Link
-                href="/pay"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.625rem 1rem",
-                  borderRadius: "10px",
-                  fontSize: "0.9rem",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  color: "var(--foreground)",
-                  backgroundColor: "transparent",
-                  transition: "all 0.2s",
-                }}
-              >
-                <CreditCard style={{ width: "18px", height: "18px" }} />
-                ชำระเงิน
-              </Link>
-
-              <Link
-                href="/status"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.625rem 1rem",
-                  borderRadius: "10px",
-                  fontSize: "0.9rem",
-                  fontWeight: 500,
-                  textDecoration: "none",
-                  color: "var(--foreground)",
-                  backgroundColor: "transparent",
-                  transition: "all 0.2s",
-                }}
-              >
-                <Search style={{ width: "18px", height: "18px" }} />
-                เช็คสถานะ
-              </Link>
-
-              <div
-                style={{
-                  width: "1px",
-                  height: "24px",
-                  backgroundColor: "var(--border)",
-                  margin: "0 0.25rem",
-                }}
-              />
-
-              <button
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                style={{
-                  padding: "0.625rem",
-                  borderRadius: "10px",
-                  backgroundColor: "var(--accent)",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "var(--foreground)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-                aria-label="Toggle theme"
-              >
-                {theme === "dark" ? (
-                  <Sun style={{ width: "18px", height: "18px" }} />
-                ) : (
-                  <Moon style={{ width: "18px", height: "18px" }} />
-                )}
-              </button>
-
-              <Link
-                href="/login"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.625rem 1.25rem",
-                  borderRadius: "10px",
-                  fontSize: "0.9rem",
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  color: "white",
-                  background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                  boxShadow: "0 4px 12px rgba(59, 130, 246, 0.25)",
-                }}
-              >
-                <LogIn style={{ width: "18px", height: "18px" }} />
-                เข้าสู่ระบบ
-              </Link>
-            </div>
-          </div>
-        </nav>
-      </header>
+      {/* Navbar */}
+      <PublicNavbar />
 
       {/* Hero Section */}
       <section
@@ -648,51 +485,8 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer
-        style={{
-          padding: "40px 0",
-          backgroundColor: "var(--card)",
-          borderTop: "1px solid var(--border)",
-        }}
-      >
-        <div style={{ maxWidth: "1280px", margin: "0 auto", padding: "0 1.5rem" }}>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "1rem",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-              <div
-                style={{
-                  width: "36px",
-                  height: "36px",
-                  borderRadius: "10px",
-                  background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Building2 style={{ width: "18px", height: "18px", color: "white" }} />
-              </div>
-              <div>
-                <span style={{ fontWeight: 600, color: "var(--foreground)" }}>{appConfig.name}</span>
-                <span style={{ display: "block", fontSize: "0.75rem", color: "var(--muted)" }}>
-                  สาขาวิศวกรรมคอมพิวเตอร์ มหาวิทยาลัยนเรศวร
-                </span>
-              </div>
-            </div>
-
-            <p style={{ fontSize: "0.875rem", color: "var(--muted)" }}>
-              © {new Date().getFullYear()} CPE Funds Hub. พัฒนาด้วย ❤️ โดยนิสิต CPE
-            </p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

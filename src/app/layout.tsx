@@ -53,7 +53,7 @@ export default async function RootLayout({
         {/* Preconnect to Google Fonts */}
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         <Suspense fallback={<LoadingFallback />}>
           <ThemeProvider>
             <NotificationProvider>

@@ -443,3 +443,47 @@ body {
 .Toastify__toast-body {
   font-size: 0.875rem !important;
 }
+
+/* =============================================================================
+ * View Transitions API - Radial Theme Toggle
+ * ============================================================================= */
+
+/* CSS Custom Properties for theme toggle position */
+:root {
+  --theme-toggle-x: 50%;
+  --theme-toggle-y: 50%;
+  --theme-toggle-radius: 150vmax;
+}
+
+/* View Transitions API animations */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
+  animation: radialThemeReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes radialThemeReveal {
+  from {
+    clip-path: circle(0px at var(--theme-toggle-x) var(--theme-toggle-y));
+  }
+  to {
+    clip-path: circle(var(--theme-toggle-radius) at var(--theme-toggle-x) var(--theme-toggle-y));
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}

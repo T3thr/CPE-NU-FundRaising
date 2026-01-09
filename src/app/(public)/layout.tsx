@@ -4,6 +4,7 @@
 
 import { Metadata } from "next";
 import PublicNavbar from "@/components/layout/PublicNavbar";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: {
@@ -18,9 +19,10 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <PublicNavbar />
-      <main style={{ paddingTop: "72px" }}>{children}</main>
-    </>
+      <main style={{ flex: 1, paddingTop: "72px" }}>{children}</main>
+      <Footer />
+    </div>
   );
 }

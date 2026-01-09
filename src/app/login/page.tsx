@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useLogin } from "@refinedev/core";
 import { appConfig } from "@/config/app.config";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 // Animation variants
 const fadeInUp = {
@@ -218,27 +219,7 @@ export default function LoginPage() {
             right: "1.5rem",
           }}
         >
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            style={{
-              padding: "0.625rem",
-              borderRadius: "10px",
-              backgroundColor: "var(--accent)",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--foreground)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? (
-              <Sun style={{ width: "20px", height: "20px" }} />
-            ) : (
-              <Moon style={{ width: "20px", height: "20px" }} />
-            )}
-          </button>
+          <ThemeToggle />
         </div>
 
         <motion.div

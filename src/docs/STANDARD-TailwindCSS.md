@@ -2,7 +2,7 @@
 
 **Project:** ระบบบริหารจัดการเงินกองกลางสาขาวิศวกรรมคอมพิวเตอร์ (CPE Funds Hub)  
 **Version:** Tailwind CSS v4.0 + Next.js 15  
-**Last Updated:** 2026-01-08
+**Last Updated:** 2026-01-09
 
 ---
 
@@ -49,9 +49,9 @@
 src/styles/global.css
 ```
 
-### 2.2 Theme Variables
+### 2.2 Theme Variables (Best Practice)
 
-เราใช้ CSS Custom Properties (CSS Variables) สำหรับจัดการ Theme:
+เราใช้ CSS Custom Properties และ `next-themes` พร้อมกับ **Smooth Global Transition** เพื่อประสบการณ์การใช้งานระดับ Professional:
 
 ```css
 /* Light Mode */
@@ -79,6 +79,12 @@ src/styles/global.css
   --border: #334155;
   --accent: #1e293b;
 }
+
+/* Global Smooth Transition */
+body {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
+}
 ```
 
 ### 2.3 การใช้งาน
@@ -93,7 +99,7 @@ src/styles/global.css
 <div className="card p-6">Card content</div>
 ```
 
-**เหตุผล:** CSS Variables ทำให้ Theme switching ไม่ต้อง re-render React components
+**เหตุผล:** CSS Variables ทำให้ Theme switching ไม่ต้อง re-render React components และ Transition property ทำให้การเปลี่ยน Theme นุ่มนวล ดูเป็นธรรมชาติ
 
 ---
 
@@ -367,17 +373,50 @@ const scaleIn = {
 };
 ```
 
-### 7.2 การใช้งาน
+### 7.2 Theme Toggle Animation (Enhanced Radial Ripple)
 
-```tsx
-<motion.div initial="hidden" animate="visible" variants={staggerContainer}>
-  {items.map((item, i) => (
-    <motion.div key={i} variants={fadeInUp}>
-      {item}
-    </motion.div>
-  ))}
-</motion.div>
+**มาตรฐาน 2026:** ใช้ CSS Transitions + Enhanced Visual Ripple Guide
+
+**หลักการ:**
+
+- Ripple มองเห็นได้ชัด (opacity: 0.65 → 0) แต่ไม่ block content
+- ใช้ Gradient สีตาม Theme (น้ำเงิน/ทอง) ให้ดูสวยงาม
+- Unique key ทำให้ animation trigger ทุกครั้งที่กด
+
+```typescript
+// Enhanced Radial Ripple - More visible gradient
+<motion.div
+  key={ripple.key} // Unique key = always triggers
+  initial={{
+    clipPath: `circle(0px at ${x}px ${y}px)`,
+    opacity: 0.65,
+  }}
+  animate={{
+    clipPath: `circle(${maxRadius}px at ${x}px ${y}px)`,
+    opacity: 0,
+  }}
+  transition={{
+    clipPath: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
+    opacity: { duration: 0.7, ease: "easeOut" },
+  }}
+  style={{
+    position: "fixed",
+    inset: 0,
+    background: isDark
+      ? "radial-gradient(circle, #1e40af, #3b82f6, #60a5fa)"
+      : "radial-gradient(circle, #fef3c7, #fde68a, #fbbf24)",
+    zIndex: 9998,
+    pointerEvents: "none",
+  }}
+/>
 ```
+
+**ข้อดี:**
+
+- ✅ **มองเห็นชัดเจน** - Opacity 0.65 + Gradient สี
+- ✅ **ไม่ทับเนื้อหา** - Fade out + pointerEvents: none
+- ✅ **Animation ทุกครั้ง** - ใช้ unique key (Date.now())
+- ✅ **Smooth** - Duration 0.7s + cubic-bezier easing
 
 ### 7.3 CSS Animations
 
@@ -516,8 +555,9 @@ const scaleIn = {
 // ใช้ CSS Variables แทน hardcode colors
 <div className="bg-[var(--card)] text-[var(--foreground)]">
 
-// หรือใช้ dark: prefix เมื่อจำเป็น
-<div className="bg-blue-100 dark:bg-blue-900/30">
+// ใช้ <ThemeToggle /> Component เพื่อเปลี่ยน Theme
+import { ThemeToggle } from "@/components/common/ThemeToggle";
+<ThemeToggle />
 ```
 
 ---

@@ -25,6 +25,7 @@ import {
   Menu
 } from "lucide-react";
 import { navigationConfig, appConfig } from "@/config/app.config";
+import { ThemeToggle } from "@/components/common/ThemeToggle";
 
 interface SidebarProps {
   isAdmin?: boolean;
@@ -135,19 +136,9 @@ export function Sidebar({
       <div className="p-4 border-t border-[var(--border)]">
         <div className="flex items-center justify-between gap-2">
           {/* Theme Toggle */}
-          {mounted && (
-            <button
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              className="p-2.5 rounded-xl bg-[var(--accent)] text-[var(--foreground)] hover:bg-[var(--border)] transition-colors"
-              title={theme === "dark" ? "Light mode" : "Dark mode"}
-            >
-              {theme === "dark" ? (
-                <Sun className="w-5 h-5" />
-              ) : (
-                <Moon className="w-5 h-5" />
-              )}
-            </button>
-          )}
+          <div className="flex-shrink-0">
+            <ThemeToggle />
+          </div>
           
           {!isCollapsed && (
             <button className="p-2.5 rounded-xl hover:bg-[var(--accent)] text-[var(--muted)] hover:text-[var(--foreground)] transition-colors">
