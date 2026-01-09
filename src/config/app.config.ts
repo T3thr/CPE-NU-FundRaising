@@ -21,19 +21,31 @@ export const appConfig = {
   
   // Payment Settings
   payment: {
-    defaultMonthlyFee: 70,
-    defaultPenaltyFee: 10,
+    defaultMonthlyFee: 70 as number,
+    defaultPenaltyFee: 10 as number,
     currency: "THB",
+  },
+  
+  // Bank Info (alias for defaultBank for backward compatibility)
+  get bank() {
+    return this.defaultBank;
   },
   
   // Academic Year Settings
   academic: {
     // Academic year starts in June (month 6)
-    startMonth: 6,
+    startMonth: 6 as number,
     // Academic year ends in May (month 5) next calendar year
-    endMonth: 5,
+    endMonth: 5 as number,
     // Number of months in academic year
-    monthsPerYear: 12,
+    monthsPerYear: 12 as number,
+    // Current academic year (Thai Buddhist Era, 2-digit)
+    get currentYear(): number {
+      const now = new Date();
+      const thaiYear = (now.getFullYear() + 543) % 100;
+      // If before June, it's still previous academic year
+      return now.getMonth() < 5 ? thaiYear - 1 : thaiYear;
+    },
   },
   
   // Thai Month Names
@@ -75,10 +87,10 @@ export const appConfig = {
     enabled: !!process.env.EASYSLIP_API_KEY,
   },
   
-  // Line Notify Settings
-  lineNotify: {
-    apiUrl: "https://notify-api.line.me/api/notify",
-    enabled: !!process.env.LINE_NOTIFY_TOKEN,
+  // Line Messaging API Settings (2026 Standard - replaces deprecated Line Notify)
+  lineMessaging: {
+    apiUrl: "https://api.line.me/v2/bot",
+    enabled: !!process.env.LINE_CHANNEL_ACCESS_TOKEN,
   },
   
   // Feature Flags

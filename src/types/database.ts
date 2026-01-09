@@ -178,6 +178,18 @@ export interface CreateMemberInput {
   line_id?: string;
 }
 
+/**
+ * Form data for member creation/editing (without cohort_id)
+ */
+export interface MemberFormData {
+  student_id: string;
+  full_name: string;
+  nickname: string;
+  email: string;
+  phone: string;
+  line_id: string;
+}
+
 export interface CreatePaymentInput {
   member_id: string;
   cohort_id: string;

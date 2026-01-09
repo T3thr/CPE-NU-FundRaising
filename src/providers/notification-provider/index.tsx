@@ -1,105 +1,107 @@
 "use client";
 // =============================================================================
-// Notification Provider - Toast Notifications
+// Notification Provider - Using react-toastify for Best Practice
 // =============================================================================
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import { createContext, useContext, ReactNode } from "react";
+import { ToastContainer, toast, ToastOptions, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-type NotificationType = "success" | "error" | "warning" | "info";
-
-interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message?: string;
-  duration?: number;
-}
-
+// Notification types
 interface NotificationContextType {
-  notifications: Notification[];
-  addNotification: (notification: Omit<Notification, "id">) => void;
-  removeNotification: (id: string) => void;
   success: (title: string, message?: string) => void;
   error: (title: string, message?: string) => void;
   warning: (title: string, message?: string) => void;
   info: (title: string, message?: string) => void;
+  loading: (title: string) => string | number;
+  dismiss: (id?: string | number) => void;
+  update: (id: string | number, options: { type: "success" | "error"; message: string }) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(
-  undefined
-);
+const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export function NotificationProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+// Default toast options
+const defaultOptions: ToastOptions = {
+  position: "top-right",
+  autoClose: 4000,
+  hideProgressBar: false,
+  closeOnClick: true,
+  pauseOnHover: true,
+  draggable: true,
+  transition: Slide,
+};
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
-  }, []);
-
-  const addNotification = useCallback(
-    (notification: Omit<Notification, "id">) => {
-      const id = Math.random().toString(36).substring(7);
-      const newNotification = { ...notification, id };
-
-      setNotifications((prev) => [...prev, newNotification]);
-
-      // Auto remove after duration (default 5s)
-      const duration = notification.duration || 5000;
-      setTimeout(() => {
-        removeNotification(id);
-      }, duration);
-    },
-    [removeNotification]
+// Toast content component
+function ToastContent({ title, message }: { title: string; message?: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="font-semibold text-sm">{title}</span>
+      {message && <span className="text-xs opacity-80">{message}</span>}
+    </div>
   );
+}
 
-  const success = useCallback(
-    (title: string, message?: string) => {
-      addNotification({ type: "success", title, message });
-    },
-    [addNotification]
-  );
+export function NotificationProvider({ children }: { children: ReactNode }) {
+  const success = (title: string, message?: string) => {
+    toast.success(<ToastContent title={title} message={message} />, defaultOptions);
+  };
 
-  const error = useCallback(
-    (title: string, message?: string) => {
-      addNotification({ type: "error", title, message, duration: 7000 });
-    },
-    [addNotification]
-  );
+  const error = (title: string, message?: string) => {
+    toast.error(<ToastContent title={title} message={message} />, {
+      ...defaultOptions,
+      autoClose: 6000,
+    });
+  };
 
-  const warning = useCallback(
-    (title: string, message?: string) => {
-      addNotification({ type: "warning", title, message });
-    },
-    [addNotification]
-  );
+  const warning = (title: string, message?: string) => {
+    toast.warning(<ToastContent title={title} message={message} />, defaultOptions);
+  };
 
-  const info = useCallback(
-    (title: string, message?: string) => {
-      addNotification({ type: "info", title, message });
-    },
-    [addNotification]
-  );
+  const info = (title: string, message?: string) => {
+    toast.info(<ToastContent title={title} message={message} />, defaultOptions);
+  };
+
+  const loading = (title: string) => {
+    return toast.loading(<ToastContent title={title} message="กรุณารอสักครู่..." />, {
+      ...defaultOptions,
+      autoClose: false,
+    });
+  };
+
+  const dismiss = (id?: string | number) => {
+    if (id) {
+      toast.dismiss(id);
+    } else {
+      toast.dismiss();
+    }
+  };
+
+  const update = (id: string | number, options: { type: "success" | "error"; message: string }) => {
+    toast.update(id, {
+      render: <ToastContent title={options.message} />,
+      type: options.type,
+      isLoading: false,
+      autoClose: 4000,
+    });
+  };
 
   return (
-    <NotificationContext.Provider
-      value={{
-        notifications,
-        addNotification,
-        removeNotification,
-        success,
-        error,
-        warning,
-        info,
-      }}
-    >
+    <NotificationContext.Provider value={{ success, error, warning, info, loading, dismiss, update }}>
       {children}
-      <NotificationContainer
-        notifications={notifications}
-        onRemove={removeNotification}
+      <ToastContainer
+        position="top-right"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+        limit={5}
+        stacked
+        toastClassName="!rounded-xl !shadow-lg !text-sm"
       />
     </NotificationContext.Provider>
   );
@@ -107,110 +109,8 @@ export function NotificationProvider({
 
 export function useNotification() {
   const context = useContext(NotificationContext);
-  if (context === undefined) {
-    throw new Error(
-      "useNotification must be used within a NotificationProvider"
-    );
+  if (!context) {
+    throw new Error("useNotification must be used within NotificationProvider");
   }
   return context;
-}
-
-// =============================================================================
-// Notification Container
-// =============================================================================
-
-function NotificationContainer({
-  notifications,
-  onRemove,
-}: {
-  notifications: Notification[];
-  onRemove: (id: string) => void;
-}) {
-  return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
-      {notifications.map((notification) => (
-        <NotificationItem
-          key={notification.id}
-          notification={notification}
-          onRemove={onRemove}
-        />
-      ))}
-    </div>
-  );
-}
-
-// =============================================================================
-// Notification Item
-// =============================================================================
-
-function NotificationItem({
-  notification,
-  onRemove,
-}: {
-  notification: Notification;
-  onRemove: (id: string) => void;
-}) {
-  const getStyles = () => {
-    switch (notification.type) {
-      case "success":
-        return "bg-green-50 border-green-200 text-green-800 dark:bg-green-900/20 dark:border-green-800 dark:text-green-200";
-      case "error":
-        return "bg-red-50 border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200";
-      case "warning":
-        return "bg-yellow-50 border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200";
-      case "info":
-        return "bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-200";
-    }
-  };
-
-  const getIcon = () => {
-    switch (notification.type) {
-      case "success":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        );
-      case "error":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        );
-      case "warning":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
-      case "info":
-        return (
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-    }
-  };
-
-  return (
-    <div
-      className={`${getStyles()} p-4 rounded-xl border shadow-lg flex items-start gap-3 animate-slide-up`}
-    >
-      <div className="flex-shrink-0">{getIcon()}</div>
-      <div className="flex-1 min-w-0">
-        <p className="font-semibold">{notification.title}</p>
-        {notification.message && (
-          <p className="text-sm opacity-80 mt-1">{notification.message}</p>
-        )}
-      </div>
-      <button
-        onClick={() => onRemove(notification.id)}
-        className="flex-shrink-0 p-1 hover:opacity-70 transition-opacity"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
-    </div>
-  );
 }

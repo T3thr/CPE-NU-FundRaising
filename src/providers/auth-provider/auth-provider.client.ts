@@ -3,40 +3,61 @@
 import type { AuthProvider } from "@refinedev/core";
 import { supabaseBrowserClient } from "@utils/supabase/client";
 
+/**
+ * Auth Provider for CPE Funds Hub
+ * 
+ * This provider handles:
+ * - Login with email/password via Supabase
+ * - Logout and session management
+ * - User identity and permissions
+ * 
+ * @see STANDARD-Auth.md for documentation
+ */
 export const authProviderClient: AuthProvider = {
   login: async ({ email, password }) => {
-    const { data, error } = await supabaseBrowserClient.auth.signInWithPassword(
-      {
+    try {
+      const { data, error } = await supabaseBrowserClient.auth.signInWithPassword({
         email,
         password,
-      }
-    );
+      });
 
-    if (error) {
+      if (error) {
+        return {
+          success: false,
+          error: {
+            name: "LoginError",
+            message: translateAuthError(error.message),
+          },
+        };
+      }
+
+      if (data?.session) {
+        await supabaseBrowserClient.auth.setSession(data.session);
+
+        return {
+          success: true,
+          redirectTo: "/admin",
+        };
+      }
+
       return {
         success: false,
-        error,
+        error: {
+          name: "LoginError",
+          message: "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+        },
       };
-    }
-
-    if (data?.session) {
-      await supabaseBrowserClient.auth.setSession(data.session);
-
+    } catch (error: any) {
       return {
-        success: true,
-        redirectTo: "/",
+        success: false,
+        error: {
+          name: "LoginError",
+          message: error.message || "เกิดข้อผิดพลาดในการเข้าสู่ระบบ",
+        },
       };
     }
-
-    // for third-party login
-    return {
-      success: false,
-      error: {
-        name: "LoginError",
-        message: "Invalid username or password",
-      },
-    };
   },
+
   logout: async () => {
     const { error } = await supabaseBrowserClient.auth.signOut();
 
@@ -52,6 +73,7 @@ export const authProviderClient: AuthProvider = {
       redirectTo: "/login",
     };
   },
+
   register: async ({ email, password }) => {
     try {
       const { data, error } = await supabaseBrowserClient.auth.signUp({
@@ -62,75 +84,132 @@ export const authProviderClient: AuthProvider = {
       if (error) {
         return {
           success: false,
-          error,
+          error: {
+            name: "RegisterError",
+            message: translateAuthError(error.message),
+          },
         };
       }
 
       if (data) {
         return {
           success: true,
-          redirectTo: "/",
+          redirectTo: "/login",
         };
       }
     } catch (error: any) {
       return {
         success: false,
-        error,
+        error: {
+          name: "RegisterError",
+          message: error.message || "เกิดข้อผิดพลาดในการสมัครสมาชิก",
+        },
       };
     }
 
     return {
       success: false,
       error: {
-        message: "Register failed",
-        name: "Invalid email or password",
+        name: "RegisterError",
+        message: "ไม่สามารถสมัครสมาชิกได้",
       },
     };
   },
-  check: async () => {
-    const { data, error } = await supabaseBrowserClient.auth.getUser();
-    const { user } = data;
 
-    if (error) {
+  check: async () => {
+    try {
+      const { data, error } = await supabaseBrowserClient.auth.getUser();
+
+      if (error) {
+        return {
+          authenticated: false,
+          redirectTo: "/login",
+          logout: true,
+        };
+      }
+
+      if (data?.user) {
+        return {
+          authenticated: true,
+        };
+      }
+
       return {
         authenticated: false,
         redirectTo: "/login",
-        logout: true,
       };
-    }
-
-    if (user) {
+    } catch {
       return {
-        authenticated: true,
+        authenticated: false,
+        redirectTo: "/login",
       };
     }
-
-    return {
-      authenticated: false,
-      redirectTo: "/login",
-    };
   },
+
   getPermissions: async () => {
-    const user = await supabaseBrowserClient.auth.getUser();
+    try {
+      const { data } = await supabaseBrowserClient.auth.getUser();
 
-    if (user) {
-      return user.data.user?.role;
+      if (data?.user) {
+        // TODO: Fetch role from user_profiles table
+        return data.user.role || "member";
+      }
+
+      return null;
+    } catch {
+      return null;
     }
-
-    return null;
   },
-  getIdentity: async () => {
-    const { data } = await supabaseBrowserClient.auth.getUser();
 
-    if (data?.user) {
+  getIdentity: async () => {
+    try {
+      const { data } = await supabaseBrowserClient.auth.getUser();
+
+      if (data?.user) {
+        return {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.email,
+          avatar: undefined,
+        };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  forgotPassword: async ({ email }) => {
+    try {
+      const { error } = await supabaseBrowserClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        return {
+          success: false,
+          error: {
+            name: "ForgotPasswordError",
+            message: translateAuthError(error.message),
+          },
+        };
+      }
+
       return {
-        ...data.user,
-        name: data.user.email,
+        success: true,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: {
+          name: "ForgotPasswordError",
+          message: error.message || "เกิดข้อผิดพลาด",
+        },
       };
     }
-
-    return null;
   },
+
   onError: async (error) => {
     if (error?.code === "PGRST301" || error?.code === 401) {
       return {
@@ -141,3 +220,20 @@ export const authProviderClient: AuthProvider = {
     return { error };
   },
 };
+
+/**
+ * Translate Supabase auth errors to Thai
+ */
+function translateAuthError(message: string): string {
+  const translations: Record<string, string> = {
+    "Invalid login credentials": "อีเมลหรือรหัสผ่านไม่ถูกต้อง",
+    "Email not confirmed": "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ",
+    "User already registered": "อีเมลนี้ถูกใช้งานแล้ว",
+    "Password should be at least 6 characters": "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร",
+    "Unable to validate email address: invalid format": "รูปแบบอีเมลไม่ถูกต้อง",
+    "Too many requests": "คำขอมากเกินไป กรุณารอสักครู่",
+    "Network error": "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้",
+  };
+
+  return translations[message] || message;
+}
