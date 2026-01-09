@@ -373,50 +373,48 @@ const scaleIn = {
 };
 ```
 
-### 7.2 Theme Toggle Animation (Enhanced Radial Ripple)
+### 7.2 Theme Toggle Animation (View Transitions API)
 
-**มาตรฐาน 2026:** ใช้ CSS Transitions + Enhanced Visual Ripple Guide
+**มาตรฐาน 2026:** ใช้ View Transitions API
 
-**หลักการ:**
+**หลักการสำคัญ:**
 
-- Ripple มองเห็นได้ชัด (opacity: 0.65 → 0) แต่ไม่ block content
-- ใช้ Gradient สีตาม Theme (น้ำเงิน/ทอง) ให้ดูสวยงาม
-- Unique key ทำให้ animation trigger ทุกครั้งที่กด
+- **ไม่มี blocking overlay** - สีของเนื้อหาจริงเปลี่ยนตาม radial pattern
+- Browser จับภาพ "before" และ "after" แล้ว animate ระหว่างกัน
+- รองรับ Chrome 111+, Edge 111+, Safari 18+
 
 ```typescript
-// Enhanced Radial Ripple - More visible gradient
-<motion.div
-  key={ripple.key} // Unique key = always triggers
-  initial={{
-    clipPath: `circle(0px at ${x}px ${y}px)`,
-    opacity: 0.65,
-  }}
-  animate={{
-    clipPath: `circle(${maxRadius}px at ${x}px ${y}px)`,
-    opacity: 0,
-  }}
-  transition={{
-    clipPath: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
-    opacity: { duration: 0.7, ease: "easeOut" },
-  }}
-  style={{
-    position: "fixed",
-    inset: 0,
-    background: isDark
-      ? "radial-gradient(circle, #1e40af, #3b82f6, #60a5fa)"
-      : "radial-gradient(circle, #fef3c7, #fde68a, #fbbf24)",
-    zIndex: 9998,
-    pointerEvents: "none",
-  }}
-/>
+// View Transitions API - No blocking overlay
+if (doc.startViewTransition) {
+  document.documentElement.style.setProperty("--theme-x", `${x}px`);
+  document.documentElement.style.setProperty("--theme-y", `${y}px`);
+  doc.startViewTransition(() => setTheme(newTheme));
+}
+```
+
+**CSS สำหรับ View Transitions:**
+
+```css
+::view-transition-new(root) {
+  z-index: 2;
+  animation: radialReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes radialReveal {
+  from {
+    clip-path: circle(0px at var(--theme-x) var(--theme-y));
+  }
+  to {
+    clip-path: circle(var(--theme-radius) at var(--theme-x) var(--theme-y));
+  }
+}
 ```
 
 **ข้อดี:**
 
-- ✅ **มองเห็นชัดเจน** - Opacity 0.65 + Gradient สี
-- ✅ **ไม่ทับเนื้อหา** - Fade out + pointerEvents: none
-- ✅ **Animation ทุกครั้ง** - ใช้ unique key (Date.now())
-- ✅ **Smooth** - Duration 0.7s + cubic-bezier easing
+- ✅ **เนื้อหาจริงเปลี่ยนสี** - ไม่มี overlay บดบัง
+- ✅ **GPU Accelerated** - clip-path ทำงานบน compositor
+- ✅ **Browser Native** - ใช้ API มาตรฐาน
 
 ### 7.3 CSS Animations
 

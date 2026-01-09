@@ -6,48 +6,77 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Sun, Moon } from "lucide-react";
 
 /**
- * ThemeToggle with Enhanced Radial Ripple Animation
- * - More visible ripple effect (opacity 0.6 → 0)
- * - Gradient ripple color for better visibility
- * - Consistent animation trigger
- * - Does NOT block content (pointerEvents: none)
+ * ThemeToggle with View Transitions API
+ * 
+ * Modern approach (2025-2026 standard):
+ * - Uses View Transitions API for browsers that support it
+ * - Content colors change following radial pattern - NO blocking overlay
+ * - Fallback to smooth CSS transitions for older browsers
+ * 
+ * How View Transitions work:
+ * 1. Browser captures "before" screenshot
+ * 2. Theme changes
+ * 3. Browser captures "after" screenshot  
+ * 4. CSS animates between them with clip-path
+ * 5. ACTUAL content is visible and changing - not covered by overlay
  */
 export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const [ripple, setRipple] = useState<{
-    x: number;
-    y: number;
-    targetTheme: "light" | "dark";
-    key: number;
-  } | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback(async () => {
     const newTheme = resolvedTheme === "dark" ? "light" : "dark";
-
-    // Get button position for ripple origin
+    
+    // Get button position for radial origin
     const button = buttonRef.current;
-    if (button) {
-      const rect = button.getBoundingClientRect();
-      const x = rect.left + rect.width / 2;
-      const y = rect.top + rect.height / 2;
-
-      // Show visual ripple guide with unique key to force re-render
-      setRipple({ x, y, targetTheme: newTheme, key: Date.now() });
+    if (!button) {
+      setTheme(newTheme);
+      return;
     }
 
-    // Change theme immediately - CSS transitions handle the visual change
-    setTheme(newTheme);
+    const rect = button.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = rect.top + rect.height / 2;
 
-    // Clear ripple after animation
-    setTimeout(() => {
-      setRipple(null);
-    }, 800);
+    // Calculate max radius to cover entire screen
+    const maxX = Math.max(x, window.innerWidth - x);
+    const maxY = Math.max(y, window.innerHeight - y);
+    const maxRadius = Math.ceil(Math.sqrt(maxX * maxX + maxY * maxY));
+
+    // Set CSS variables for the animation origin
+    document.documentElement.style.setProperty("--theme-x", `${x}px`);
+    document.documentElement.style.setProperty("--theme-y", `${y}px`);
+    document.documentElement.style.setProperty("--theme-radius", `${maxRadius}px`);
+
+    // Check for View Transitions API support
+    const doc = document as Document & {
+      startViewTransition?: (callback: () => Promise<void> | void) => {
+        ready: Promise<void>;
+        finished: Promise<void>;
+      };
+    };
+
+    if (doc.startViewTransition) {
+      // Use View Transitions API - content changes with radial reveal, NO overlay
+      const transition = doc.startViewTransition(() => {
+        setTheme(newTheme);
+      });
+
+      // Wait for transition to be ready then add "active" class for CSS targeting
+      await transition.ready;
+      document.documentElement.classList.add("theme-transitioning");
+      
+      await transition.finished;
+      document.documentElement.classList.remove("theme-transitioning");
+    } else {
+      // Fallback: Just change theme with CSS transitions
+      setTheme(newTheme);
+    }
   }, [resolvedTheme, setTheme]);
 
   if (!mounted) {
@@ -60,14 +89,6 @@ export function ThemeToggle() {
   }
 
   const isDark = resolvedTheme === "dark";
-
-  // Calculate max radius for full screen coverage
-  const getMaxRadius = () => {
-    if (typeof window === "undefined") return 2000;
-    return Math.ceil(Math.sqrt(
-      Math.pow(window.innerWidth, 2) + Math.pow(window.innerHeight, 2)
-    ));
-  };
 
   return (
     <>
@@ -88,7 +109,6 @@ export function ThemeToggle() {
           justifyContent: "center",
           overflow: "hidden",
           cursor: "pointer",
-          transition: "background-color 0.3s ease, border-color 0.3s ease",
         }}
         className="hover:bg-slate-100 dark:hover:bg-slate-800"
       >
@@ -109,68 +129,62 @@ export function ThemeToggle() {
         </AnimatePresence>
       </button>
 
-      {/* Enhanced Radial Ripple - More visible but still doesn't block */}
-      <AnimatePresence>
-        {ripple && (
-          <motion.div
-            key={ripple.key}
-            initial={{
-              clipPath: `circle(0px at ${ripple.x}px ${ripple.y}px)`,
-              opacity: 0.65,
-            }}
-            animate={{
-              clipPath: `circle(${getMaxRadius()}px at ${ripple.x}px ${ripple.y}px)`,
-              opacity: 0,
-            }}
-            exit={{
-              opacity: 0,
-            }}
-            transition={{
-              clipPath: { duration: 0.7, ease: [0.4, 0, 0.2, 1] },
-              opacity: { duration: 0.7, ease: "easeOut" },
-            }}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              width: "100vw",
-              height: "100vh",
-              background: ripple.targetTheme === "dark" 
-                ? "radial-gradient(circle at center, #1e40af 0%, #3b82f6 50%, #60a5fa 100%)"
-                : "radial-gradient(circle at center, #fef3c7 0%, #fde68a 50%, #fbbf24 100%)",
-              zIndex: 9998,
-              pointerEvents: "none",
-            }}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Global transition styles for smooth theme change */}
+      {/* View Transitions CSS - This makes CONTENT change radially, not an overlay */}
       <style jsx global>{`
-        /* Smooth transitions for all themed elements */
-        body,
-        main,
-        header,
-        footer,
-        nav,
-        .card,
-        [style*="background"],
-        [style*="border"],
-        [class*="bg-"],
-        [class*="border-"] {
-          transition: 
-            background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-            border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-            color 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        /* CSS Variables for animation origin */
+        :root {
+          --theme-x: 50vw;
+          --theme-y: 50vh;
+          --theme-radius: 150vmax;
+        }
+
+        /* View Transitions API - Radial Reveal Animation */
+        /* This affects the ACTUAL content, not an overlay */
+        ::view-transition-old(root),
+        ::view-transition-new(root) {
+          animation: none;
+          mix-blend-mode: normal;
+        }
+
+        ::view-transition-old(root) {
+          z-index: 1;
+        }
+
+        ::view-transition-new(root) {
+          z-index: 2;
+          animation: radialReveal 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        @keyframes radialReveal {
+          from {
+            clip-path: circle(0px at var(--theme-x) var(--theme-y));
+          }
+          to {
+            clip-path: circle(var(--theme-radius) at var(--theme-x) var(--theme-y));
+          }
+        }
+
+        /* Fallback for browsers without View Transitions API */
+        /* Smooth color transitions when API not available */
+        @supports not (view-transition-name: root) {
+          body,
+          .card,
+          header,
+          footer,
+          nav,
+          main {
+            transition: 
+              background-color 0.3s ease-out,
+              border-color 0.3s ease-out,
+              color 0.25s ease-out;
+          }
         }
 
         /* Respect user preferences */
         @media (prefers-reduced-motion: reduce) {
-          body,
-          .card,
-          [style*="background"],
-          [style*="border"] {
-            transition: none !important;
+          ::view-transition-old(root),
+          ::view-transition-new(root) {
+            animation: none !important;
           }
         }
       `}</style>
