@@ -101,7 +101,6 @@ CREATE TABLE IF NOT EXISTS members (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
   -- Unique constraint: one student ID per cohort
->>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
   UNIQUE(cohort_id, student_id)
 );
 

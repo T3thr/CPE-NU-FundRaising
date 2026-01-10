@@ -331,6 +331,7 @@ export function validateMemberData(data: {
   studentId?: string;
   firstName?: string;
   lastName?: string;
+  fullName?: string;
   email?: string;
   phone?: string;
   lineId?: string;
@@ -342,6 +343,12 @@ export function validateMemberData(data: {
       errors.push("กรุณากรอกรหัสนิสิต");
     } else if (!isValidStudentId(data.studentId)) {
       errors.push("รหัสนิสิตต้องเป็นตัวเลข 8 หลัก");
+    }
+  }
+
+  if (data.fullName !== undefined) {
+    if (!data.fullName.trim()) {
+      errors.push("กรุณากรอกชื่อ-นามสกุล");
     }
   }
 
