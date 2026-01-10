@@ -1,13 +1,21 @@
 "use client";
 // =============================================================================
+<<<<<<< HEAD
 // Create Member Content - Using Inline Styles (Tailwind v4 Compatible)
 // Based on: CHANGELOG-AdminUI-Refactor.md patterns
+=======
+// Create Member Content
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 // =============================================================================
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+<<<<<<< HEAD
 import { Info, ArrowLeft, UserPlus, Upload } from "lucide-react";
+=======
+import { Card, Button } from "@/components/ui";
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 import { MemberForm } from "@/components/members";
 import { useNotification } from "@/providers/notification-provider";
 import type { MemberFormData } from "@/types/database";
@@ -25,7 +33,11 @@ export default function CreateMemberContent() {
       // await createMember(cohortId, data);
       
       // Simulate API call
+<<<<<<< HEAD
       await new Promise((resolve) => setTimeout(resolve, 1000));
+=======
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
       
       success("เพิ่มสมาชิกสำเร็จ", `${data.full_name} ถูกเพิ่มเข้าระบบแล้ว`);
       router.push("/admin/members");
@@ -38,6 +50,7 @@ export default function CreateMemberContent() {
   };
 
   return (
+<<<<<<< HEAD
     <div style={{ maxWidth: "640px", margin: "0 auto" }}>
       {/* Header */}
       <div style={{ marginBottom: "1.5rem" }}>
@@ -92,12 +105,37 @@ export default function CreateMemberContent() {
           marginBottom: "1.5rem",
         }}
       >
+=======
+    <div className="max-w-2xl mx-auto space-y-6">
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-muted">
+        <Link href="/admin" className="hover:text-foreground transition-colors">
+          หน้าหลัก
+        </Link>
+        <span>/</span>
+        <Link href="/admin/members" className="hover:text-foreground transition-colors">
+          สมาชิก
+        </Link>
+        <span>/</span>
+        <span className="text-foreground">เพิ่มสมาชิก</span>
+      </nav>
+
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl md:text-3xl font-bold">เพิ่มสมาชิกใหม่</h1>
+        <p className="text-muted mt-1">กรอกข้อมูลสมาชิกใหม่ลงระบบ</p>
+      </div>
+
+      {/* Form Card */}
+      <Card padding="lg">
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
         <MemberForm
           onSubmit={handleSubmit}
           onCancel={() => router.push("/admin/members")}
           isLoading={isLoading}
           submitLabel="เพิ่มสมาชิก"
         />
+<<<<<<< HEAD
       </div>
 
       {/* Tips */}
@@ -133,6 +171,21 @@ export default function CreateMemberContent() {
                 Import CSV
               </Link>
             </li>
+=======
+      </Card>
+
+      {/* Tips */}
+      <div className="alert-info">
+        <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div>
+          <p className="font-medium">เคล็ดลับ</p>
+          <ul className="text-sm list-disc list-inside mt-1 space-y-0.5">
+            <li>รหัสนิสิตต้องเป็นตัวเลข 8 หลัก</li>
+            <li>อีเมลและ Line ID ใช้สำหรับติดต่อและแจ้งเตือน</li>
+            <li>ต้องการเพิ่มหลายคน? ใช้ <Link href="/admin/members/import" className="text-primary-600 hover:underline">Import CSV</Link></li>
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
           </ul>
         </div>
       </div>

@@ -29,11 +29,15 @@ CREATE INDEX IF NOT EXISTS idx_organizations_slug ON organizations(slug);
 
 -- =============================================================================
 -- 2. COHORTS TABLE (รุ่น/ชั้นปี)
+<<<<<<< HEAD
 -- Based on: src/docs/DESIGN-Database&DataEntry.md
+=======
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS cohorts (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+<<<<<<< HEAD
   name TEXT NOT NULL,                   -- ชื่อรุ่น (เช่น "CPE30")
   slug TEXT UNIQUE NOT NULL,            -- URL slug (เช่น "cpe30")
   academic_year INT NOT NULL,           -- ปีการศึกษา (เช่น 2566)
@@ -47,6 +51,14 @@ CREATE TABLE IF NOT EXISTS cohorts (
   -- 🚀 Smart Config: ตั้งค่ายืดหยุ่นของแต่ละรุ่น
   config JSONB DEFAULT '{}',            -- เก็บตั้งค่าเพิ่มเติม (เช่น bank_account, line_group)
   
+=======
+  name TEXT NOT NULL,
+  academic_year INT NOT NULL,
+  monthly_fee INT NOT NULL DEFAULT 70,
+  penalty_fee INT NOT NULL DEFAULT 10,
+  start_month INT NOT NULL DEFAULT 6,
+  end_month INT NOT NULL DEFAULT 5,
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
   is_active BOOLEAN NOT NULL DEFAULT true,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -59,11 +71,15 @@ CREATE INDEX IF NOT EXISTS idx_cohorts_year ON cohorts(academic_year DESC);
 
 -- =============================================================================
 -- 3. MEMBERS TABLE (สมาชิก)
+<<<<<<< HEAD
 -- Based on: src/docs/DESIGN-Database&DataEntry.md
+=======
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 -- =============================================================================
 CREATE TABLE IF NOT EXISTS members (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   cohort_id UUID NOT NULL REFERENCES cohorts(id) ON DELETE CASCADE,
+<<<<<<< HEAD
   student_id VARCHAR(8) NOT NULL,       -- รหัสนิสิต (YYMMXXXX)
   title TEXT,                           -- คำนำหน้า (นาย/นางสาว)
   first_name TEXT NOT NULL,             -- ชื่อจริง
@@ -81,13 +97,30 @@ CREATE TABLE IF NOT EXISTS members (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
   -- Composite Unique Key: ห้ามมีรหัสนิสิตซ้ำในรุ่นเดียวกัน
+=======
+  student_id TEXT NOT NULL,
+  full_name TEXT NOT NULL,
+  nickname TEXT,
+  email TEXT,
+  phone TEXT,
+  line_id TEXT,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  -- Unique constraint: one student ID per cohort
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
   UNIQUE(cohort_id, student_id)
 );
 
 -- Create indexes
 CREATE INDEX IF NOT EXISTS idx_members_cohort ON members(cohort_id);
 CREATE INDEX IF NOT EXISTS idx_members_student_id ON members(student_id);
+<<<<<<< HEAD
 CREATE INDEX IF NOT EXISTS idx_members_status ON members(status);
+=======
+CREATE INDEX IF NOT EXISTS idx_members_active ON members(is_active);
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 
 -- =============================================================================
 -- 4. PAYMENTS TABLE (บันทึกการชำระเงิน)
