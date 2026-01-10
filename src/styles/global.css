@@ -111,6 +111,7 @@ body {
   box-shadow: var(--shadow-medium);
 }
 
+<<<<<<< HEAD
 .card-interactive {
   background-color: var(--card) !important;
   border-radius: var(--radius-xl) !important;
@@ -130,6 +131,8 @@ body {
   border-color: var(--color-primary-600);
 }
 
+=======
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 /* =============================================================================
  * Component Styles - Buttons
  * ============================================================================= */
@@ -396,6 +399,7 @@ body {
 }
 
 /* =============================================================================
+<<<<<<< HEAD
  * Component Styles - Tables
  * ============================================================================= */
 .table-container {
@@ -564,6 +568,8 @@ select {
 }
 
 /* =============================================================================
+=======
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
  * Utilities
  * ============================================================================= */
 .text-gradient {
@@ -573,6 +579,7 @@ select {
   background-clip: text !important;
 }
 
+<<<<<<< HEAD
 /* Text color utilities */
 .text-muted {
   color: var(--muted) !important;
@@ -616,6 +623,8 @@ select {
   border-color: var(--border) !important;
 }
 
+=======
+>>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 /* Safe area for mobile */
 .safe-area-pb {
   padding-bottom: env(safe-area-inset-bottom) !important;

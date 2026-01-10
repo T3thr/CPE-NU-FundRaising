@@ -328,7 +328,6 @@ export function Sidebar({
       </nav>
 
       {/* Footer */}
-<<<<<<< HEAD
       <div
         style={{
           padding: "1rem",
@@ -337,14 +336,6 @@ export function Sidebar({
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.5rem" }}>
           <ThemeToggle />
-=======
-      <div className="p-4 border-t border-[var(--border)]">
-        <div className="flex items-center justify-between gap-2">
-          {/* Theme Toggle */}
-          <div className="flex-shrink-0">
-            <ThemeToggle />
-          </div>
->>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
           
           {!isCollapsed && (
             <button 
