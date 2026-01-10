@@ -1,5 +1,4 @@
 // =============================================================================
-<<<<<<< HEAD
 // Admin Reports Page (Optimized)
 // Uses dynamic import for faster initial load
 // =============================================================================
@@ -89,13 +88,6 @@ const ReportsContent = dynamic(
     loading: () => <ReportsSkeleton />,
   }
 );
-=======
-// Admin Reports Page
-// =============================================================================
-
-import { Metadata } from "next";
-import ReportsContent from "./_components/ReportsContent";
->>>>>>> d281b8382144a1b13889bc6d40060fafce4e224b
 
 export const metadata: Metadata = {
   title: "รายงาน",
