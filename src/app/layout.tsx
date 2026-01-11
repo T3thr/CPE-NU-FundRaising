@@ -9,6 +9,7 @@ import { authProviderClient } from "@providers/auth-provider/auth-provider.clien
 import { dataProvider } from "@providers/data-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { NotificationProvider } from "@/providers/notification-provider";
+import { SessionProvider } from "@/providers/session-provider";
 import "@styles/global.css";
 
 export const metadata: Metadata = {
@@ -55,67 +56,69 @@ export default async function RootLayout({
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <Suspense fallback={<LoadingFallback />}>
-          <ThemeProvider>
-            <NotificationProvider>
-              <RefineKbarProvider>
-                <DevtoolsProvider>
-                  <Refine
-                    routerProvider={routerProvider}
-                    authProvider={authProviderClient}
-                    dataProvider={dataProvider}
-                    resources={[
-                      {
-                        name: "members",
-                        list: "/admin/members",
-                        create: "/admin/members/create",
-                        edit: "/admin/members/:id/edit",
-                        show: "/admin/members/:id",
-                        meta: {
-                          label: "สมาชิก",
-                          icon: "users",
+          <SessionProvider>
+            <ThemeProvider>
+              <NotificationProvider>
+                <RefineKbarProvider>
+                  <DevtoolsProvider>
+                    <Refine
+                      routerProvider={routerProvider}
+                      authProvider={authProviderClient}
+                      dataProvider={dataProvider}
+                      resources={[
+                        {
+                          name: "members",
+                          list: "/admin/members",
+                          create: "/admin/members/create",
+                          edit: "/admin/members/:id/edit",
+                          show: "/admin/members/:id",
+                          meta: {
+                            label: "สมาชิก",
+                            icon: "users",
+                          },
                         },
-                      },
-                      {
-                        name: "payments",
-                        list: "/admin/payments",
-                        show: "/admin/payments/:id",
-                        meta: {
-                          label: "การชำระเงิน",
-                          icon: "credit-card",
+                        {
+                          name: "payments",
+                          list: "/admin/payments",
+                          show: "/admin/payments/:id",
+                          meta: {
+                            label: "การชำระเงิน",
+                            icon: "credit-card",
+                          },
                         },
-                      },
-                      {
-                        name: "cohorts",
-                        list: "/super-admin/cohorts",
-                        create: "/super-admin/cohorts/create",
-                        edit: "/super-admin/cohorts/:id/edit",
-                        meta: {
-                          label: "รุ่น",
-                          icon: "users",
+                        {
+                          name: "cohorts",
+                          list: "/super-admin/cohorts",
+                          create: "/super-admin/cohorts/create",
+                          edit: "/super-admin/cohorts/:id/edit",
+                          meta: {
+                            label: "รุ่น",
+                            icon: "users",
+                          },
                         },
-                      },
-                      {
-                        name: "organizations",
-                        list: "/super-admin/organizations",
-                        meta: {
-                          label: "สาขา",
-                          icon: "building",
+                        {
+                          name: "organizations",
+                          list: "/super-admin/organizations",
+                          meta: {
+                            label: "สาขา",
+                            icon: "building",
+                          },
                         },
-                      },
-                    ]}
-                    options={{
-                      syncWithLocation: true,
-                      warnWhenUnsavedChanges: true,
-                      projectId: "h4ixKt-MFQ5tt-ecZ8MR",
-                    }}
-                  >
-                    {children}
-                    <RefineKbar />
-                  </Refine>
-                </DevtoolsProvider>
-              </RefineKbarProvider>
-            </NotificationProvider>
-          </ThemeProvider>
+                      ]}
+                      options={{
+                        syncWithLocation: true,
+                        warnWhenUnsavedChanges: true,
+                        projectId: "h4ixKt-MFQ5tt-ecZ8MR",
+                      }}
+                    >
+                      {children}
+                      <RefineKbar />
+                    </Refine>
+                  </DevtoolsProvider>
+                </RefineKbarProvider>
+              </NotificationProvider>
+            </ThemeProvider>
+          </SessionProvider>
         </Suspense>
       </body>
     </html>

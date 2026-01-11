@@ -1,12 +1,13 @@
 "use client";
 // =============================================================================
-// Public Navbar Component - Center Alignment Fixed
-// CPE Funds Hub - มหาวิทยาลัยนเรศวร
+// Public Navbar Component - Auth-Aware Version
+// CPE Funds Hub - Private Web (All users are authenticated)
+// Based on: src/docs/STANDARD-Security.md
 // =============================================================================
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2,
@@ -14,9 +15,12 @@ import {
   Search,
   Menu,
   X,
-  LogIn,
+  LogOut,
   ChevronRight,
+  ShieldCheck,
+  User,
 } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
 import { appConfig } from "@/config/app.config";
 import { ThemeToggle } from "@/components/common/ThemeToggle";
 
@@ -44,8 +48,14 @@ const publicNavItems: NavItem[] = [
 
 export function PublicNavbar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { data: session, status } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // Check if user is super_admin
+  const isSuperAdmin = session?.user && (session.user as { role?: string }).role === "super_admin";
 
   useEffect(() => {
     const handleScroll = () => {
@@ -73,6 +83,37 @@ export function PublicNavbar() {
   }, [isMobileMenuOpen]);
 
   const isActive = (href: string) => pathname === href;
+
+  // Handle logout
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await signOut({ redirect: false });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Don't render until session is loaded
+  if (status === "loading") {
+    return (
+      <header
+        style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 50,
+          height: "72px",
+          backgroundColor: "var(--card)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      />
+    );
+  }
 
   return (
     <>
@@ -192,6 +233,29 @@ export function PublicNavbar() {
               );
             })}
 
+            {/* Admin Link - Only for Super Admin */}
+            {isSuperAdmin && (
+              <Link
+                href="/admin"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.625rem 1rem",
+                  borderRadius: "10px",
+                  fontSize: "0.9rem",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                  color: pathname.startsWith("/admin") ? "#f59e0b" : "#f59e0b",
+                  backgroundColor: pathname.startsWith("/admin") ? "rgba(245, 158, 11, 0.1)" : "transparent",
+                  transition: "all 0.2s",
+                }}
+              >
+                <ShieldCheck style={{ width: "18px", height: "18px" }} />
+                Admin
+              </Link>
+            )}
+
             <div
               style={{
                 width: "1px",
@@ -203,26 +267,80 @@ export function PublicNavbar() {
 
             <ThemeToggle />
 
-            <Link
-              href="/login"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.625rem 1.25rem",
-                borderRadius: "10px",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                textDecoration: "none",
-                color: "white",
-                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                boxShadow: "0 4px 12px rgba(59, 130, 246, 0.25)",
-                marginLeft: "0.5rem",
-              }}
-            >
-              <LogIn style={{ width: "18px", height: "18px" }} />
-              เข้าสู่ระบบ
-            </Link>
+            {/* User Info & Logout */}
+            {session?.user && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.75rem",
+                  marginLeft: "0.5rem",
+                }}
+              >
+                {/* User Badge */}
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "10px",
+                    backgroundColor: "var(--accent)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "28px",
+                      height: "28px",
+                      borderRadius: "8px",
+                      backgroundColor: isSuperAdmin ? "#f59e0b" : "#3b82f6",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {isSuperAdmin ? (
+                      <ShieldCheck style={{ width: "16px", height: "16px", color: "white" }} />
+                    ) : (
+                      <User style={{ width: "16px", height: "16px", color: "white" }} />
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 600, color: "var(--foreground)" }}>
+                      {session.user.name || "User"}
+                    </div>
+                    <div style={{ fontSize: "0.625rem", color: "var(--muted)" }}>
+                      {isSuperAdmin ? "เหรัญญิก" : "สมาชิก"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.5rem",
+                    padding: "0.625rem 1rem",
+                    borderRadius: "10px",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    border: "1px solid var(--border)",
+                    backgroundColor: "var(--card)",
+                    color: "var(--muted)",
+                    cursor: isLoggingOut ? "not-allowed" : "pointer",
+                    transition: "all 0.2s",
+                    opacity: isLoggingOut ? 0.6 : 1,
+                  }}
+                >
+                  <LogOut style={{ width: "16px", height: "16px" }} />
+                  ออกจากระบบ
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Mobile Actions */}
@@ -295,7 +413,7 @@ export function PublicNavbar() {
               className="show-mobile"
             />
             
-            {/* Dropdown Menu Panel - PERFECTLY CENTERED */}
+            {/* Dropdown Menu Panel */}
             <motion.div
               initial={{ opacity: 0, y: -10, scale: 0.95, translateX: "-50%" }}
               animate={{ opacity: 1, y: 0, scale: 1, translateX: "-50%" }}
@@ -304,10 +422,9 @@ export function PublicNavbar() {
               style={{
                 position: "fixed",
                 top: "85px",
-                left: "50%", // Anchor to center
-                // transform: "translateX(-50%)", // Moved to motion prop to avoid conflict
-                width: "calc(100% - 2rem)", // Full width minus padding
-                maxWidth: "380px", // Limit max width
+                left: "50%",
+                width: "calc(100% - 2rem)",
+                maxWidth: "380px",
                 backgroundColor: "var(--card)",
                 borderRadius: "24px",
                 border: "1px solid var(--border)",
@@ -320,6 +437,50 @@ export function PublicNavbar() {
               }}
               className="show-mobile"
             >
+              {/* User Info Card */}
+              {session?.user && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    padding: "1rem",
+                    borderRadius: "16px",
+                    backgroundColor: "var(--accent)",
+                    border: "1px solid var(--border)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "12px",
+                      backgroundColor: isSuperAdmin ? "#f59e0b" : "#3b82f6",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {isSuperAdmin ? (
+                      <ShieldCheck style={{ width: "20px", height: "20px", color: "white" }} />
+                    ) : (
+                      <User style={{ width: "20px", height: "20px", color: "white" }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, color: "var(--foreground)", fontSize: "0.9rem" }}>
+                      {session.user.name || "User"}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "var(--muted)" }}>
+                      {isSuperAdmin ? "เหรัญญิก (Super Admin)" : "สมาชิกสาขา"}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Navigation Items */}
               {publicNavItems.map((item, index) => {
                 const Icon = item.icon;
@@ -338,10 +499,9 @@ export function PublicNavbar() {
                       onClick={() => setIsMobileMenuOpen(false)}
                       style={{
                         display: "grid",
-                        // Key for centering: Fixed Left (Icon) - Flexible Middle (Text) - Fixed Right (Arrow)
                         gridTemplateColumns: "48px 1fr 48px", 
                         alignItems: "center",
-                        width: "100%", // Force full width
+                        width: "100%",
                         padding: "1rem 0.5rem",
                         borderRadius: "16px",
                         textDecoration: "none",
@@ -352,12 +512,11 @@ export function PublicNavbar() {
                         transition: "all 0.2s ease",
                       }}
                     >
-                      {/* 1. Left: Icon (Centered in 48px box) */}
                       <div 
                         style={{ 
                           width: "40px", 
                           height: "40px", 
-                          margin: "0 auto", // Center in grid cell
+                          margin: "0 auto",
                           borderRadius: "10px", 
                           display: "flex", 
                           alignItems: "center", 
@@ -371,7 +530,6 @@ export function PublicNavbar() {
                         {Icon && <Icon style={{ width: "20px", height: "20px" }} />}
                       </div>
 
-                      {/* 2. Middle: Text (Centered) */}
                       <div style={{ textAlign: "center", padding: "0 4px" }}>
                         <div 
                           style={{ 
@@ -394,7 +552,6 @@ export function PublicNavbar() {
                         </div>
                       </div>
 
-                      {/* 3. Right: Arrow (Centered in 48px box) */}
                       <div 
                         style={{ 
                           width: "40px", 
@@ -414,6 +571,40 @@ export function PublicNavbar() {
                 );
               })}
 
+              {/* Admin Link - Only for Super Admin */}
+              {isSuperAdmin && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  style={{ width: "100%" }}
+                >
+                  <Link
+                    href="/admin"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.625rem",
+                      width: "100%",
+                      padding: "1rem",
+                      borderRadius: "16px",
+                      fontSize: "0.9375rem",
+                      fontWeight: 700,
+                      textDecoration: "none",
+                      color: "white",
+                      background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                      boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)",
+                      border: "none",
+                    }}
+                  >
+                    <ShieldCheck style={{ width: "20px", height: "20px" }} />
+                    เข้าสู่ Admin Panel
+                  </Link>
+                </motion.div>
+              )}
+
               {/* Divider */}
               <div style={{ 
                 height: "1px", 
@@ -423,36 +614,40 @@ export function PublicNavbar() {
                 margin: "0.25rem 0"
               }} />
 
-              {/* Login Button - Centered via Flex */}
+              {/* Logout Button */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
                 style={{ width: "100%" }}
               >
-                <Link
-                  href="/login"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  disabled={isLoggingOut}
                   style={{
-                    display: "flex", // Flex for single centered item
+                    display: "flex",
                     alignItems: "center",
-                    justifyContent: "center", // Horizontal Center
+                    justifyContent: "center",
                     gap: "0.625rem",
-                    width: "100%", // Force Full Width
+                    width: "100%",
                     padding: "1rem",
                     borderRadius: "16px",
                     fontSize: "0.9375rem",
-                    fontWeight: 700,
-                    textDecoration: "none",
-                    color: "white",
-                    background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)",
-                    boxShadow: "0 4px 12px rgba(59, 130, 246, 0.3)",
-                    border: "none",
+                    fontWeight: 600,
+                    color: "#ef4444",
+                    backgroundColor: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.2)",
+                    cursor: isLoggingOut ? "not-allowed" : "pointer",
+                    opacity: isLoggingOut ? 0.6 : 1,
+                    transition: "all 0.2s",
                   }}
                 >
-                  <LogIn style={{ width: "20px", height: "20px" }} />
-                  เข้าสู่ระบบสำหรับเจ้าหน้าที่
-                </Link>
+                  <LogOut style={{ width: "20px", height: "20px" }} />
+                  {isLoggingOut ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}
+                </button>
               </motion.div>
             </motion.div>
           </>

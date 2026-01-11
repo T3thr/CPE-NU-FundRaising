@@ -304,6 +304,53 @@ export default function SettingsContent() {
         </span>
       </motion.div>
 
+      {/* Smart Guidance when no cohort */}
+      {!cohort && (
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={fadeInUp}
+          style={{
+            padding: "1.25rem",
+            borderRadius: "16px",
+            background: "linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(239, 68, 68, 0.1) 100%)",
+            border: "1px solid rgba(245, 158, 11, 0.3)",
+          }}
+        >
+          <h3 style={{ fontWeight: 700, fontSize: "1rem", color: "#b45309", marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            ⚠️ ต้องตั้งค่าข้อมูลพื้นฐานก่อน
+          </h3>
+          <p style={{ fontSize: "0.875rem", color: "#92400e", marginBottom: "1rem", lineHeight: 1.7 }}>
+            คุณยังไม่สามารถตั้งค่าการชำระเงินได้ เนื่องจากยังไม่มีข้อมูลรุ่น (Cohort) ในระบบ กรุณาทำตามขั้นตอนต่อไปนี้:
+          </p>
+          <ol style={{ margin: 0, paddingLeft: "1.25rem", fontSize: "0.875rem", color: "#92400e", lineHeight: 1.8 }}>
+            <li><strong>ขั้นตอนที่ 1:</strong> ไปที่หน้า <a href="/admin/organization" style={{ color: "#2563eb", textDecoration: "underline", fontWeight: 600 }}>องค์กร</a> เพื่อสร้างข้อมูลองค์กร (ชื่อภาควิชา, บัญชีธนาคาร)</li>
+            <li><strong>ขั้นตอนที่ 2:</strong> สร้างรุ่น (เช่น CPE30) โดยกดปุ่ม "สร้างรุ่นใหม่" ในหน้าองค์กร</li>
+            <li><strong>ขั้นตอนที่ 3:</strong> กลับมาที่หน้านี้เพื่อตั้งค่าการชำระเงิน</li>
+          </ol>
+          <div style={{ marginTop: "1rem" }}>
+            <a
+              href="/admin/organization"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.625rem 1.25rem",
+                borderRadius: "10px",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                background: "linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)",
+                color: "white",
+                textDecoration: "none",
+                boxShadow: "0 4px 12px rgba(139, 92, 246, 0.3)",
+              }}
+            >
+              ไปหน้าตั้งค่าองค์กร →
+            </a>
+          </div>
+        </motion.div>
+      )}
+
       {/* Service Status */}
       <motion.div
         initial="hidden"

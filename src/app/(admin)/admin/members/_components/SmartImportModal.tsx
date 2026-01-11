@@ -93,9 +93,10 @@ export default function SmartImportModal({ isOpen, onClose, onImport }: SmartImp
             style={{
               width: "100%",
               maxWidth: step === "table-preview" ? "1000px" : "800px",
-              maxHeight: "90vh",
+              maxHeight: "calc(100vh - 2rem)",
+              height: "auto",
               backgroundColor: "var(--card)",
-              borderRadius: "20px",
+              borderRadius: "16px",
               border: "1px solid var(--border)",
               boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.25)",
               overflow: "hidden",

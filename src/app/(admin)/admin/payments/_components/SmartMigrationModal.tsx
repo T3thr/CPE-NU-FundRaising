@@ -530,9 +530,10 @@ export default function SmartMigrationModal({ isOpen, onClose, onMigrate, cohort
             style={{
               width: "100%",
               maxWidth: step === "preview" ? "1200px" : "900px",
-              maxHeight: "90vh",
+              maxHeight: "calc(100vh - 2rem)",
+              height: "auto",
               backgroundColor: "var(--card)",
-              borderRadius: "20px",
+              borderRadius: "16px",
               border: "1px solid var(--border)",
               boxShadow: "0 25px 50px -12px rgb(0 0 0 / 0.4)",
               overflow: "hidden",

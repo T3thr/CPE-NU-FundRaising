@@ -35,3 +35,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database secrets & danger scripts
+supabase/fix_rls_and_seed_admin.sql
+supabase/DANGER_reset_database.sql
+src/docs/STANDARD-Database.md

@@ -1,12 +1,40 @@
 "use server";
 // =============================================================================
 // Admin Server Actions - Real Data from Supabase
-// Based on: src/docs/DESIGN-Database&DataEntry.md
-// Best Practice: Next.js 15+ Server Actions
+// Secure Service Role Access with App-Level Authorization
 // =============================================================================
 
 import { createSupabaseServerClient } from "@/utils/supabase/server";
+import { createSupabaseAdminClient } from "@/utils/supabase/admin";
+import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+
+// =============================================================================
+// Helper: Get Authorized Admin Client
+// Bypasses RLS but enforces App-Level Security Check
+// =============================================================================
+async function getAuthenticatedAdminClient() {
+  const session = await auth();
+  
+  // 1. Authentication Check
+  if (!session?.user) {
+    throw new Error("Unauthorized: Please login first");
+  }
+
+  // 2. Authorization Check (Role-Based)
+  // Check strict super_admin for modifying critical data
+  const userRole = (session.user as { role?: string }).role;
+  
+  // Note: We use Admin Client which has FULL ACCESS.
+  // So we must be very careful to only return it to trusted users.
+  // In this system, only super_admin (Treasurer) should be accessing admin actions.
+  // If public users access this file's actions, they will be blocked here.
+  if (userRole !== 'super_admin') {
+     throw new Error("Permission Denied: Only Treasurer can perform this action.");
+  }
+
+  return createSupabaseAdminClient();
+}
 
 // =============================================================================
 // Types
@@ -71,7 +99,9 @@ export interface CohortSettings {
  * Get dashboard statistics for the current cohort
  */
 export async function getDashboardStats(cohortId?: string): Promise<DashboardStats> {
-  const supabase = await createSupabaseServerClient();
+  // Use Admin Client to ensure we can read ALL data regardless of RLS
+  // (Standard admin dashboard needs to see everything)
+  const supabase = await getAuthenticatedAdminClient();
   
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -171,7 +201,7 @@ export async function getDashboardStats(cohortId?: string): Promise<DashboardSta
  * Get recent payments for dashboard
  */
 export async function getRecentPayments(limit = 5): Promise<PaymentRecord[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data, error } = await supabase
     .from("payments")
@@ -216,7 +246,7 @@ export async function getRecentPayments(limit = 5): Promise<PaymentRecord[]> {
  * Get members with unpaid balances
  */
 export async function getUnpaidMembers(limit = 5): Promise<MemberWithPayments[]> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
   
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -292,7 +322,7 @@ export async function getUnpaidMembers(limit = 5): Promise<MemberWithPayments[]>
  * Get all members for a cohort
  */
 export async function getMembers(cohortId?: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   let query = supabase
     .from("members")
@@ -327,7 +357,7 @@ export async function importMembers(
     email?: string;
   }>
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const insertData = members.map(m => ({
     cohort_id: cohortId,
@@ -362,7 +392,7 @@ export async function importMembers(
  * Update member status
  */
 export async function updateMemberStatus(memberId: string, status: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { error } = await supabase
     .from("members")
@@ -386,7 +416,7 @@ export async function updateMemberStatus(memberId: string, status: string) {
  * Get active cohort settings
  */
 export async function getActiveCohort(): Promise<CohortSettings | null> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data, error } = await supabase
     .from("cohorts")
@@ -415,6 +445,153 @@ export async function getActiveCohort(): Promise<CohortSettings | null> {
 }
 
 /**
+ * Get all cohorts for the organization
+ */
+export async function getCohorts(): Promise<CohortSettings[]> {
+  const supabase = await getAuthenticatedAdminClient();
+
+  const { data, error } = await supabase
+    .from("cohorts")
+    .select("*")
+    .order("academic_year", { ascending: false });
+
+  if (error || !data) {
+    console.error("Error fetching cohorts:", error);
+    return [];
+  }
+
+  return data.map(c => ({
+    id: c.id,
+    name: c.name,
+    slug: c.slug,
+    academicYear: c.academic_year,
+    monthlyFee: c.monthly_fee,
+    penaltyFee: c.penalty_fee,
+    startMonth: c.start_month,
+    endMonth: c.end_month,
+    isActive: c.is_active,
+    config: c.config || {},
+  }));
+}
+
+/**
+ * Create a new cohort (รุ่น)
+ * Based on: src/docs/SYSTEM-Validation&BusinessRules.md
+ */
+export async function createCohort(data: {
+  name: string;
+  slug?: string;
+  academicYear: number;
+  monthlyFee?: number;
+  penaltyFee?: number;
+  startMonth?: number;
+  endMonth?: number;
+  setAsActive?: boolean;
+}): Promise<{ success: boolean; id?: string; error?: string }> {
+  const supabase = await getAuthenticatedAdminClient();
+
+  // Get organization
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (!org) {
+    return { success: false, error: "กรุณาสร้างข้อมูลองค์กรก่อน" };
+  }
+
+  // Generate slug from name if not provided
+  const slug = data.slug || data.name
+    .toLowerCase()
+    .replace(/[^a-z0-9ก-๙\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .slice(0, 50);
+
+  // If setting as active, deactivate other cohorts
+  if (data.setAsActive) {
+    await supabase
+      .from("cohorts")
+      .update({ is_active: false })
+      .eq("organization_id", org.id);
+  }
+
+  // Create cohort
+  const { data: cohort, error } = await supabase
+    .from("cohorts")
+    .insert({
+      organization_id: org.id,
+      name: data.name,
+      slug,
+      academic_year: data.academicYear,
+      monthly_fee: data.monthlyFee ?? 70,
+      penalty_fee: data.penaltyFee ?? 10,
+      start_month: data.startMonth ?? 7, // กรกฎาคม
+      end_month: data.endMonth ?? 3, // มีนาคม
+      is_active: data.setAsActive ?? true,
+      config: {},
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    console.error("Error creating cohort:", error);
+    // Handle RLS Policy violation specifically
+    if (error.code === '42501') {
+      return { 
+        success: false, 
+        error: "คุณไม่มีสิทธิ์ดำเนินการนี้ (Permission Denied) กรุณาตรวจสอบว่าคุณเข้าสู่ระบบด้วยบัญชี 'เหรัญญิก' (ไม่ใช่สมาชิกสาขา)" 
+      };
+    }
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/organization");
+  revalidatePath("/admin/settings");
+  revalidatePath("/admin/members");
+  return { success: true, id: cohort.id };
+}
+
+/**
+ * Set a cohort as active (และ deactivate อื่นๆ)
+ */
+export async function setActiveCohort(cohortId: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await getAuthenticatedAdminClient();
+
+  // Deactivate all cohorts first
+  const { data: cohort } = await supabase
+    .from("cohorts")
+    .select("organization_id")
+    .eq("id", cohortId)
+    .single();
+
+  if (!cohort) {
+    return { success: false, error: "ไม่พบรุ่นที่ต้องการ" };
+  }
+
+  await supabase
+    .from("cohorts")
+    .update({ is_active: false })
+    .eq("organization_id", cohort.organization_id);
+
+  // Set selected cohort as active
+  const { error } = await supabase
+    .from("cohorts")
+    .update({ is_active: true })
+    .eq("id", cohortId);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/organization");
+  revalidatePath("/admin/settings");
+  return { success: true };
+}
+
+/**
  * Update cohort settings
  */
 export async function updateCohortSettings(
@@ -427,7 +604,7 @@ export async function updateCohortSettings(
     config: Record<string, unknown>;
   }>
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -462,7 +639,7 @@ export async function updateCohortSettings(
  * Get payments grid data for a cohort
  */
 export async function getPaymentsGrid(cohortId: string, year: number) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   // Get all members
   const { data: members } = await supabase
@@ -511,7 +688,7 @@ export async function getPaymentsGrid(cohortId: string, year: number) {
  * Verify a payment
  */
 export async function verifyPayment(paymentId: string, verified: boolean) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { error } = await supabase
     .from("payments")
@@ -538,7 +715,7 @@ export async function verifyPayment(paymentId: string, verified: boolean) {
  * Update payment amount
  */
 export async function updatePaymentAmount(paymentId: string, amount: number) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { error } = await supabase
     .from("payments")
@@ -569,7 +746,7 @@ export async function upsertPayment(data: {
   amount: number;
   status?: "pending" | "verified";
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   // Check if payment exists
   const { data: existing } = await supabase
@@ -622,7 +799,7 @@ export async function upsertPayment(data: {
  * Get pending slips for verification
  */
 export async function getPendingSlips(limit = 20, offset = 0) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data, error, count } = await supabase
     .from("payments")
@@ -757,7 +934,7 @@ export async function getLineMessagingStatus(): Promise<{
  * Export members to CSV format
  */
 export async function exportMembersCSV(cohortId: string) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data: members } = await supabase
     .from("members")
@@ -788,7 +965,7 @@ export async function exportMembersCSV(cohortId: string) {
  * Export payments to CSV format
  */
 export async function exportPaymentsCSV(cohortId: string, year: number) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data: payments } = await supabase
     .from("payments")
@@ -845,7 +1022,7 @@ export interface OrganizationData {
  * Get active organization (first one)
  */
 export async function getOrganization(): Promise<OrganizationData | null> {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data, error } = await supabase
     .from("organizations")
@@ -884,7 +1061,7 @@ export async function updateOrganization(
     logoUrl: string;
   }>
 ) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const updateData: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
@@ -922,7 +1099,7 @@ export async function createOrganization(data: {
   bankAccountNo: string;
   bankAccountName: string;
 }) {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await getAuthenticatedAdminClient();
 
   const { data: org, error } = await supabase
     .from("organizations")
@@ -963,18 +1140,30 @@ export interface MigrationPaymentRecord {
 
 /**
  * Migrate payments from Google Sheets format to Supabase
- * - Creates members if not exist
- * - Creates payment records
- * - Smart duplicate detection
+ * AI-like Smart Features:
+ * - Smart member matching (by studentId OR name)
+ * - Auto-create members if not exist
+ * - Update nickname if provided
+ * - Skip duplicate payments
+ * - Detailed statistics
  */
 export async function migratePayments(
   records: MigrationPaymentRecord[],
   cohortId?: string
-): Promise<{ success: boolean; inserted: number; skipped: number; errors: string[] }> {
-  const supabase = await createSupabaseServerClient();
+): Promise<{ 
+  success: boolean; 
+  inserted: number; 
+  skipped: number;
+  membersCreated: number;
+  membersUpdated: number;
+  errors: string[] 
+}> {
+  const supabase = await getAuthenticatedAdminClient();
   const errors: string[] = [];
   let inserted = 0;
   let skipped = 0;
+  let membersCreated = 0;
+  let membersUpdated = 0;
 
   try {
     // Get active cohort if not specified
@@ -987,7 +1176,7 @@ export async function migratePayments(
         .single();
       
       if (!cohort) {
-        return { success: false, inserted: 0, skipped: 0, errors: ["ไม่พบ Cohort ที่ใช้งาน"] };
+        return { success: false, inserted: 0, skipped: 0, membersCreated: 0, membersUpdated: 0, errors: ["ไม่พบ Cohort ที่ใช้งาน - กรุณาสร้างรุ่นก่อน"] };
       }
       activeCohortId = cohort.id;
     }
@@ -1000,53 +1189,101 @@ export async function migratePayments(
       .single();
 
     if (!org) {
-      return { success: false, inserted: 0, skipped: 0, errors: ["ไม่พบข้อมูล Organization"] };
+      return { success: false, inserted: 0, skipped: 0, membersCreated: 0, membersUpdated: 0, errors: ["ไม่พบข้อมูล Organization - กรุณาสร้างองค์กรก่อน"] };
+    }
+
+    // Fetch all existing members for smart matching
+    const { data: existingMembers } = await supabase
+      .from("members")
+      .select("id, student_id, first_name, last_name, nickname")
+      .eq("cohort_id", activeCohortId);
+
+    const memberMap = new Map<string, { id: string; firstName: string; lastName: string; nickname?: string }>();
+    const nameMap = new Map<string, string>(); // "firstname lastname" -> member id
+
+    if (existingMembers) {
+      for (const m of existingMembers) {
+        memberMap.set(m.student_id, { id: m.id, firstName: m.first_name, lastName: m.last_name, nickname: m.nickname });
+        // Create name index for fuzzy matching
+        const nameKey = `${m.first_name} ${m.last_name}`.toLowerCase().trim();
+        nameMap.set(nameKey, m.id);
+      }
     }
 
     // Group records by student ID
     const studentRecords: Record<string, MigrationPaymentRecord[]> = {};
     for (const record of records) {
-      if (!studentRecords[record.studentId]) {
-        studentRecords[record.studentId] = [];
+      const key = record.studentId || `name:${record.firstName}${record.lastName}`;
+      if (!studentRecords[key]) {
+        studentRecords[key] = [];
       }
-      studentRecords[record.studentId].push(record);
+      studentRecords[key].push(record);
     }
 
     // Process each student
-    const studentIds = Object.keys(studentRecords);
-    for (const studentId of studentIds) {
-      const payments = studentRecords[studentId];
-      try {
-        // Check if member exists
-        let { data: member } = await supabase
-          .from("members")
-          .select("id")
-          .eq("student_id", studentId)
-          .eq("cohort_id", activeCohortId)
-          .single();
+    const studentKeys = Object.keys(studentRecords);
+    for (const key of studentKeys) {
+      const payments = studentRecords[key];
+      const firstPayment = payments[0];
 
-        // Create member if not exists
-        if (!member) {
-          const firstPayment = payments[0];
+      try {
+        let memberId: string | null = null;
+        let isNewMember = false;
+
+        // Strategy 1: Match by student ID
+        if (firstPayment.studentId && memberMap.has(firstPayment.studentId)) {
+          memberId = memberMap.get(firstPayment.studentId)!.id;
+        }
+        
+        // Strategy 2: Match by name (if no student ID or not found)
+        if (!memberId && firstPayment.firstName && firstPayment.lastName) {
+          const nameKey = `${firstPayment.firstName} ${firstPayment.lastName}`.toLowerCase().trim();
+          if (nameMap.has(nameKey)) {
+            memberId = nameMap.get(nameKey)!;
+          }
+        }
+
+        // Strategy 3: Create new member
+        if (!memberId) {
+          const studentId = firstPayment.studentId || `TEMP-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          
           const { data: newMember, error: memberError } = await supabase
             .from("members")
             .insert({
-              organization_id: org.id,
               cohort_id: activeCohortId,
               student_id: studentId,
               title: firstPayment.title || null,
               first_name: firstPayment.firstName || "ไม่ทราบชื่อ",
               last_name: firstPayment.lastName || "",
+              nickname: (firstPayment as MigrationPaymentRecord & { nickname?: string }).nickname || null,
               status: "active",
             })
             .select("id")
             .single();
 
           if (memberError) {
-            errors.push(`Member ${studentId}: ${memberError.message}`);
+            errors.push(`Member ${firstPayment.studentId}: ${memberError.message}`);
             continue;
           }
-          member = newMember;
+          
+          memberId = newMember.id;
+          membersCreated++;
+          isNewMember = true;
+
+          // Update cache
+          memberMap.set(studentId, { id: newMember.id, firstName: firstPayment.firstName, lastName: firstPayment.lastName });
+        }
+
+        // Update nickname if provided and member exists
+        if (!isNewMember && (firstPayment as MigrationPaymentRecord & { nickname?: string }).nickname) {
+          const existingMember = memberMap.get(firstPayment.studentId);
+          if (existingMember && !(existingMember as { nickname?: string }).nickname) {
+            await supabase
+              .from("members")
+              .update({ nickname: (firstPayment as MigrationPaymentRecord & { nickname?: string }).nickname })
+              .eq("id", memberId);
+            membersUpdated++;
+          }
         }
 
         // Insert payments for this member
@@ -1055,7 +1292,7 @@ export async function migratePayments(
           const { data: existingPayment } = await supabase
             .from("payments")
             .select("id")
-            .eq("member_id", member.id)
+            .eq("member_id", memberId)
             .eq("payment_month", payment.month)
             .eq("payment_year", payment.year)
             .single();
@@ -1070,7 +1307,7 @@ export async function migratePayments(
             .from("payments")
             .insert({
               cohort_id: activeCohortId,
-              member_id: member.id,
+              member_id: memberId,
               amount: payment.amount,
               payment_month: payment.month,
               payment_year: payment.year,
@@ -1080,13 +1317,13 @@ export async function migratePayments(
             });
 
           if (paymentError) {
-            errors.push(`Payment ${studentId}/${payment.month}: ${paymentError.message}`);
+            errors.push(`Payment ${payment.month}/${payment.year}: ${paymentError.message}`);
           } else {
             inserted++;
           }
         }
       } catch (err) {
-        errors.push(`Student ${studentId}: ${err instanceof Error ? err.message : "Unknown error"}`);
+        errors.push(`Record ${key}: ${err instanceof Error ? err.message : "Unknown error"}`);
       }
     }
 
@@ -1099,6 +1336,8 @@ export async function migratePayments(
       success: errors.length === 0,
       inserted,
       skipped,
+      membersCreated,
+      membersUpdated,
       errors: errors.slice(0, 10), // Limit errors returned
     };
   } catch (err) {
@@ -1107,6 +1346,8 @@ export async function migratePayments(
       success: false,
       inserted,
       skipped,
+      membersCreated: 0,
+      membersUpdated: 0,
       errors: [err instanceof Error ? err.message : "Unknown migration error"],
     };
   }
